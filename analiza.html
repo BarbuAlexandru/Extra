@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Analiză</title>
+<style>
+  :root {
+    --bg: #0b141a;
+    --panel: #111b21;
+    --header: #202c33;
+    --text: #e9edef;
+    --muted: #8696a0;
+    --divider: #182229;
+    --accent: #53bdeb;
+    --line: #2a3942;
+    --quote: #005c4b;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", Roboto, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--header);
+    border-bottom: 1px solid #000;
+    padding: 12px 16px;
+  }
+  .header-inner {
+    max-width: 760px;
+    margin: 0 auto;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  header h1 { font-size: 17px; font-weight: 600; margin: 0; }
+  header a.back { font-size: 14px; color: var(--accent); text-decoration: none; }
+  header a.back:hover { text-decoration: underline; }
+
+  main {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 28px 20px 80px;
+  }
+
+  article h1, article h2, article h3, article h4 {
+    line-height: 1.3;
+    font-weight: 700;
+  }
+  article h1 {
+    font-size: 27px;
+    margin: 44px 0 14px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--line);
+  }
+  article h1:first-child { margin-top: 0; }
+  article h2 {
+    font-size: 21px;
+    margin: 36px 0 10px;
+    color: #d3e0e6;
+  }
+  article h3 {
+    font-size: 18px;
+    margin: 28px 0 8px;
+    color: var(--accent);
+  }
+  article h4 {
+    font-size: 16px;
+    margin: 22px 0 6px;
+    color: #d3e0e6;
+  }
+  article p { margin: 0 0 14px; }
+  article strong { color: #fff; font-weight: 700; }
+  article em { color: #cdd8dd; }
+  article a { color: var(--accent); }
+
+  article hr {
+    border: 0;
+    border-top: 1px solid var(--line);
+    margin: 34px 0;
+  }
+
+  article ul, article ol { margin: 0 0 16px; padding-left: 24px; }
+  article li { margin: 4px 0; }
+  article li::marker { color: var(--muted); }
+
+  article blockquote {
+    margin: 0 0 16px;
+    padding: 10px 16px;
+    border-left: 4px solid var(--quote);
+    background: var(--panel);
+    border-radius: 0 8px 8px 0;
+    color: #cdd8dd;
+  }
+  article blockquote p:last-child { margin-bottom: 0; }
+
+  .table-wrap { overflow-x: auto; margin: 0 0 18px; }
+  article table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 15px;
+  }
+  article th, article td {
+    border: 1px solid var(--line);
+    padding: 8px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+  article th {
+    background: var(--header);
+    font-weight: 600;
+  }
+  article tbody tr:nth-child(even) td { background: rgba(255,255,255,.02); }
+
+  .status { text-align: center; color: var(--muted); padding: 40px 16px; }
+
+  @media (max-width: 600px) {
+    body { font-size: 15.5px; }
+    main { padding: 20px 16px 60px; }
+    article h1 { font-size: 23px; }
+    article h2 { font-size: 19px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <h1>Analiză</h1>
+    <a class="back" href="index.html">← Conversația</a>
+  </div>
+</header>
+
+<main>
+  <article id="doc"><p class="status">Se încarcă…</p></article>
+</main>
+
+<script>
+(function () {
+  var doc = document.getElementById('doc');
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+
+  // Inline: escape first, then apply bold/italic/links on the safe text.
+  function inline(s) {
+    s = escapeHtml(s);
+    s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+      '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    s = s.replace(/(https?:\/\/[^\s<)]+)/g,
+      '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+    s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>');
+    return s;
+  }
+
+  function splitRow(line) {
+    var t = line.trim().replace(/^\|/, '').replace(/\|$/, '');
+    return t.split('|').map(function (c) { return c.trim(); });
+  }
+  function isDivider(line) {
+    return /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(line);
+  }
+
+  function render(md) {
+    var lines = md.replace(/\r/g, '').split('\n');
+    var out = [];
+    var i = 0;
+
+    function flushParagraph(buf) {
+      if (buf.length) out.push('<p>' + inline(buf.join(' ')) + '</p>');
+      return [];
+    }
+
+    var para = [];
+
+    while (i < lines.length) {
+      var line = lines[i];
+      var trimmed = line.trim();
+
+      // blank line
+      if (trimmed === '') { para = flushParagraph(para); i++; continue; }
+
+      // horizontal rule
+      if (/^(-{3,}|\*{3,}|_{3,})$/.test(trimmed)) {
+        para = flushParagraph(para);
+        out.push('<hr>');
+        i++; continue;
+      }
+
+      // heading
+      var h = /^(#{1,6})\s+(.*)$/.exec(trimmed);
+      if (h) {
+        para = flushParagraph(para);
+        var level = Math.min(h[1].length, 4);
+        out.push('<h' + level + '>' + inline(h[2]) + '</h' + level + '>');
+        i++; continue;
+      }
+
+      // table: current line has a pipe and next line is a divider
+      if (trimmed.indexOf('|') !== -1 && i + 1 < lines.length && isDivider(lines[i + 1])) {
+        para = flushParagraph(para);
+        var header = splitRow(trimmed);
+        i += 2; // skip header + divider
+        var rows = [];
+        while (i < lines.length && lines[i].trim().indexOf('|') !== -1 && lines[i].trim() !== '') {
+          rows.push(splitRow(lines[i]));
+          i++;
+        }
+        var t = '<div class="table-wrap"><table><thead><tr>';
+        header.forEach(function (c) { t += '<th>' + inline(c) + '</th>'; });
+        t += '</tr></thead><tbody>';
+        rows.forEach(function (r) {
+          t += '<tr>';
+          for (var c = 0; c < header.length; c++) {
+            t += '<td>' + inline(r[c] || '') + '</td>';
+          }
+          t += '</tr>';
+        });
+        t += '</tbody></table></div>';
+        out.push(t);
+        continue;
+      }
+
+      // blockquote (may span multiple lines)
+      if (/^>\s?/.test(trimmed)) {
+        para = flushParagraph(para);
+        var quote = [];
+        while (i < lines.length && /^\s*>\s?/.test(lines[i])) {
+          quote.push(lines[i].replace(/^\s*>\s?/, ''));
+          i++;
+        }
+        out.push('<blockquote>' + inline(quote.join(' ')) + '</blockquote>');
+        continue;
+      }
+
+      // unordered list
+      if (/^[-*]\s+/.test(trimmed)) {
+        para = flushParagraph(para);
+        var ul = '<ul>';
+        while (i < lines.length && /^\s*[-*]\s+/.test(lines[i])) {
+          ul += '<li>' + inline(lines[i].replace(/^\s*[-*]\s+/, '')) + '</li>';
+          i++;
+        }
+        ul += '</ul>';
+        out.push(ul);
+        continue;
+      }
+
+      // ordered list
+      if (/^\d+\.\s+/.test(trimmed)) {
+        para = flushParagraph(para);
+        var ol = '<ol>';
+        while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i])) {
+          ol += '<li>' + inline(lines[i].replace(/^\s*\d+\.\s+/, '')) + '</li>';
+          i++;
+        }
+        ol += '</ol>';
+        out.push(ol);
+        continue;
+      }
+
+      // plain paragraph text
+      para.push(trimmed);
+      i++;
+    }
+    flushParagraph(para);
+
+    doc.innerHTML = out.join('\n');
+  }
+
+  fetch('a.md', { cache: 'no-store' })
+    .then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.text();
+    })
+    .then(function (t) { render(t); })
+    .catch(function (e) {
+      doc.innerHTML = '<p class="status">Nu s-a putut încărca a.md (' +
+        escapeHtml(String(e.message)) +
+        ').<br>Deschide pagina printr-un server web, nu direct de pe disc.</p>';
+    });
+})();
+</script>
+
+</body>
+</html>
