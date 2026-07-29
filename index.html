@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Conversație</title>
+<style>
+  :root {
+    --bg: #0b141a;
+    --panel: #111b21;
+    --header: #202c33;
+    --out: #005c4b;
+    --in: #202c33;
+    --text: #e9edef;
+    --muted: #8696a0;
+    --divider: #182229;
+    --accent: #53bdeb;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", Roboto, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.45;
+  }
+
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--header);
+    border-bottom: 1px solid #000;
+    padding: 12px 16px;
+  }
+  .header-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  header h1 { font-size: 17px; font-weight: 600; margin: 0; }
+  header .meta { font-size: 13px; color: var(--muted); }
+
+  main {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 16px 12px 60px;
+  }
+
+  .day {
+    text-align: center;
+    margin: 22px 0 14px;
+  }
+  .day span {
+    background: var(--divider);
+    color: var(--muted);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    padding: 5px 12px;
+    border-radius: 8px;
+  }
+
+  .row { display: flex; margin-bottom: 3px; }
+  .row.out { justify-content: flex-end; }
+  .row.in  { justify-content: flex-start; }
+  .row.first { margin-top: 12px; }
+
+  .bubble {
+    max-width: min(78%, 620px);
+    padding: 7px 10px 6px;
+    border-radius: 8px;
+    position: relative;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+    box-shadow: 0 1px 0.5px rgba(0,0,0,.25);
+  }
+  .in  .bubble { background: var(--in); border-top-left-radius: 8px; }
+  .out .bubble { background: var(--out); border-top-right-radius: 8px; }
+  .row.first.in  .bubble { border-top-left-radius: 0; }
+  .row.first.out .bubble { border-top-right-radius: 0; }
+
+  .name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 2px;
+  }
+  .out .name { color: #a5d6a7; }
+
+  .text { white-space: pre-wrap; }
+  .text a { color: var(--accent); }
+
+  .time {
+    display: block;
+    text-align: right;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+    user-select: none;
+  }
+  .out .time { color: rgba(233,237,239,.6); }
+
+  .media {
+    font-style: italic;
+    color: var(--muted);
+  }
+  .edited { font-size: 11px; color: var(--muted); font-style: italic; }
+
+  .status { text-align: center; color: var(--muted); padding: 40px 16px; }
+
+  @media (max-width: 600px) {
+    body { font-size: 14.5px; }
+    .bubble { max-width: 86%; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <h1 id="title">Conversație</h1>
+    <span class="meta" id="subtitle"></span>
+  </div>
+</header>
+
+<main>
+  <div id="chat"><p class="status">Se încarcă…</p></div>
+</main>
+
+<script>
+(function () {
+  var chat = document.getElementById('chat');
+
+  // "7/29/26, 10:36 AM - Sender: text"  (WhatsApp uses U+202F before AM/PM)
+  var HEAD = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4}),\s*(\d{1,2}:\d{2})(?:[\s  ]*([AaPp][Mm]))?\s-\s([^:]{1,60}?):\s?([\s\S]*)$/;
+
+  var MONTHS = ['ianuarie','februarie','martie','aprilie','mai','iunie',
+                'iulie','august','septembrie','octombrie','noiembrie','decembrie'];
+
+  function parse(raw) {
+    var lines = raw.replace(/\r/g, '').split('\n');
+    var msgs = [];
+    for (var i = 0; i < lines.length; i++) {
+      var m = HEAD.exec(lines[i]);
+      if (m) {
+        msgs.push({
+          m: +m[1], d: +m[2], y: +m[3],
+          time: m[4] + (m[5] ? ' ' + m[5].toUpperCase() : ''),
+          sender: m[6].trim(),
+          text: m[7]
+        });
+      } else if (msgs.length) {
+        msgs[msgs.length - 1].text += '\n' + lines[i];
+      }
+    }
+    return msgs;
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+
+  function linkify(s) {
+    return s.replace(/(https?:\/\/[^\s<]+)/g, function (u) {
+      return '<a href="' + u + '" target="_blank" rel="noopener noreferrer">' + u + '</a>';
+    });
+  }
+
+  function dayLabel(msg) {
+    var y = msg.y < 100 ? 2000 + msg.y : msg.y;
+    return msg.d + ' ' + MONTHS[msg.m - 1] + ' ' + y;
+  }
+
+  function render(msgs) {
+    if (!msgs.length) {
+      chat.innerHTML = '<p class="status">Nu s-a găsit niciun mesaj în msg.txt.</p>';
+      return;
+    }
+
+    // Whoever speaks first is shown on the right.
+    var rightSide = msgs[0].sender;
+    var senders = [];
+    msgs.forEach(function (x) { if (senders.indexOf(x.sender) < 0) senders.push(x.sender); });
+
+    document.getElementById('subtitle').textContent =
+      senders.join(' · ') + ' — ' + msgs.length + ' mesaje';
+
+    var html = '';
+    var lastDay = '';
+    var lastSender = '';
+
+    msgs.forEach(function (msg) {
+      var day = dayLabel(msg);
+      if (day !== lastDay) {
+        html += '<div class="day"><span>' + escapeHtml(day) + '</span></div>';
+        lastDay = day;
+        lastSender = '';
+      }
+
+      var first = msg.sender !== lastSender;
+      lastSender = msg.sender;
+
+      var body = msg.text.trim();
+      var edited = false;
+      body = body.replace(/\s*<This message was edited>\s*$/, function () { edited = true; return ''; });
+
+      var textHtml;
+      if (/^<.*(omitted|deleted).*>$/i.test(body) || body === 'null') {
+        textHtml = '<span class="media">' + escapeHtml(body) + '</span>';
+      } else {
+        textHtml = linkify(escapeHtml(body));
+      }
+
+      html += '<div class="row ' + (msg.sender === rightSide ? 'out' : 'in') +
+              (first ? ' first' : '') + '">' +
+                '<div class="bubble">' +
+                  (first ? '<div class="name">' + escapeHtml(msg.sender) + '</div>' : '') +
+                  '<div class="text">' + textHtml +
+                    (edited ? ' <span class="edited">(editat)</span>' : '') +
+                  '</div>' +
+                  '<span class="time">' + escapeHtml(msg.time) + '</span>' +
+                '</div>' +
+              '</div>';
+    });
+
+    chat.innerHTML = html;
+  }
+
+  fetch('msg.txt', { cache: 'no-store' })
+    .then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.text();
+    })
+    .then(function (t) { render(parse(t)); })
+    .catch(function (e) {
+      chat.innerHTML = '<p class="status">Nu s-a putut încărca msg.txt (' +
+        escapeHtml(String(e.message)) +
+        ').<br>Deschide pagina printr-un server web, nu direct de pe disc.</p>';
+    });
+})();
+</script>
+
+</body>
+</html>
